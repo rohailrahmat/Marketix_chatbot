@@ -263,8 +263,9 @@ export function useChatbot() {
       .filter(m => m.role === "user" || m.role === "assistant")
       .map(m => ({
         role: m.role,
-        content: m.role === "user" ? m.html : m.html.replace(/<[^>]+>/g, ""),
-      }));
+        content: String(m.html || m.content || "").replace(/<[^>]+>/g, "").trim(),
+      }))
+      .filter(m => m.content.length > 0);
 
     try {
       const reply = await callAI(history);
