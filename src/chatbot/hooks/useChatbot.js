@@ -186,7 +186,7 @@ YOUR BEHAVIOR RULES
 - Mention the free 30-minute strategy call whenever appropriate`;
 
 // !! PASTE YOUR GROQ API KEY BELOW !!
-const GROQ_API_KEY = import.meta.env.VITE_GROQ_API_KEY || "PASTE_YOUR_GROQ_KEY_HERE";
+const GROQ_API_KEY = import.meta.env.VITE_GROQ_API_KEY;
 
 export function useChatbot() {
   const [isOpen, setIsOpen] = useState(false);
