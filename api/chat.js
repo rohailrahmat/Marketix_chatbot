@@ -1,23 +1,23 @@
 export default async function handler(req, res) {
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
-  }
+  // Handle CORS
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+
+  if (req.method === "OPTIONS") return res.status(200).end();
+  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
   const { messages } = req.body;
-
   if (!messages || !Array.isArray(messages)) {
     return res.status(400).json({ error: "messages array is required" });
   }
 
   const groqKey = process.env.GROQ_API_KEY;
-
-  if (!groqKey) {
-    return res.status(500).json({ error: "GROQ_API_KEY not configured on server" });
-  }
+  if (!groqKey) return res.status(500).json({ error: "GROQ_API_KEY not configured on server" });
 
   const SYSTEM_PROMPT = `You are the official AI assistant for Marketix International, a premium digital growth agency. Be professional, confident, persuasive, and concise.
 
-COMPANY: Marketix International — "We Scale Brands. We build empires."
+COMPANY: Marketix International — We Scale Brands. We build empires.
 Founded: 2020 by Amjad Khan | Team: 40+ specialists | Award: Agency of the Year 2025
 
 SERVICES:
@@ -31,24 +31,24 @@ SERVICES:
 
 WHY CHOOSE US:
 - Average 3.2x ROI within 6 months
-- Ships in weeks not months (2-week sprints)
-- Work directly with founders — zero junior staff
-- Data-driven: every decision backed by A/B testing
+- Ships in weeks not months
+- Work directly with founders, zero junior staff
+- Data-driven decisions, A/B testing everything
 
 CONTACT:
 - Email: marketixinternational@gmail.com
 - Phone: +92 3172982093
-- Address: Ali Business Complex, 3rd Floor, Office No. 5, Zulfiqarabad, Jutail, Gilgit
-- Free 30-min strategy call available at marketixinternational.com/contact-us/
+- Website: https://marketixinternational.com
+- Free 30-min strategy call: https://marketixinternational.com/contact-us/
 
 RULES:
-- Keep replies under 100 words unless detail is needed
-- Never invent pricing — invite free consultation
-- Always end with a helpful CTA
-- Link to relevant pages when discussing services`;
+- Keep replies under 100 words unless detail is truly needed
+- Never invent pricing, always invite free consultation
+- Always end with a helpful call to action
+- Be professional, persuasive, and helpful`;
 
   try {
-    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    const groqResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -60,26 +60,40 @@ RULES:
           { role: "system", content: SYSTEM_PROMPT },
           ...messages.map(m => ({
             role: m.role === "assistant" ? "assistant" : "user",
-            content: m.content,
+            content: String(m.content || ""),
           })),
         ],
         temperature: 0.7,
         max_tokens: 512,
+        stream: false,
       }),
     });
 
-    const data = await response.json();
+    const rawText = await groqResponse.text();
+    console.log("[api/chat] Groq raw response:", rawText.substring(0, 200));
 
-    if (!response.ok) {
-      return res.status(500).json({ error: data?.error?.message || "Groq API error" });
+    if (!groqResponse.ok) {
+      return res.status(500).json({ error: `Groq error ${groqResponse.status}: ${rawText}` });
+    }
+
+    let data;
+    try {
+      data = JSON.parse(rawText);
+    } catch {
+      return res.status(500).json({ error: `Invalid JSON from Groq: ${rawText}` });
     }
 
     const reply = data?.choices?.[0]?.message?.content;
-    if (!reply) return res.status(500).json({ error: "Empty response from Groq" });
 
-    return res.json({ reply });
+    if (!reply) {
+      console.log("[api/chat] Full response:", JSON.stringify(data));
+      return res.status(500).json({ error: "No reply received from Groq" });
+    }
+
+    return res.status(200).json({ reply });
 
   } catch (err) {
+    console.error("[api/chat] Error:", err.message);
     return res.status(500).json({ error: err.message });
   }
 }
