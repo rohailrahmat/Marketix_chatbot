@@ -185,8 +185,8 @@ YOUR BEHAVIOR RULES
 - Always end with a helpful follow-up offer or call to action
 - Mention the free 30-minute strategy call whenever appropriate`;
 
-// !! PASTE YOUR GROQ API KEY BELOW !!
-const GROQ_API_KEY = "import.meta.env.VITE_GROQ_API_KEY";
+// API call goes through /api/chat serverless function on Vercel
+// Key is stored securely in Vercel environment variables
 
 export function useChatbot() {
   const [isOpen, setIsOpen] = useState(false);
@@ -227,29 +227,15 @@ export function useChatbot() {
   };
 
   const callAI = useCallback(async (history) => {
-    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    const response = await fetch("/api/chat", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${GROQ_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: "llama-3.3-70b-versatile",
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          ...history.map(m => ({
-            role: m.role === "assistant" ? "assistant" : "user",
-            content: m.content,
-          })),
-        ],
-        temperature: 0.7,
-        max_tokens: 512,
-      }),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ messages: history }),
     });
 
     if (!response.ok) {
       const err = await response.json().catch(() => ({}));
-      throw new Error(err?.error?.message || `API error: ${response.status}`);
+      throw new Error(err?.error || `Server error: ${response.status}`);
     }
 
     const data = await response.json();
@@ -321,5 +307,3 @@ export function useChatbot() {
     sendMessage, submitLead, setShowLeadForm,
   };
 }
-
-
