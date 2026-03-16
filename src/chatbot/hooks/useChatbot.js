@@ -239,7 +239,7 @@ export function useChatbot() {
     }
 
     const data = await response.json();
-    const reply = data?.choices?.[0]?.message?.content;
+    const reply = data?.reply;
     if (!reply) throw new Error("No reply received");
     return reply;
   }, []);
