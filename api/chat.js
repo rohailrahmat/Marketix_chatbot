@@ -1,5 +1,4 @@
 export default async function handler(req, res) {
-  // Handle CORS
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
@@ -60,7 +59,7 @@ RULES:
           { role: "system", content: SYSTEM_PROMPT },
           ...messages.map(m => ({
             role: m.role === "assistant" ? "assistant" : "user",
-            content: String(m.content || ""),
+            content: String(m.content || "hello"),
           })),
         ],
         temperature: 0.7,
@@ -70,27 +69,36 @@ RULES:
     });
 
     const rawText = await groqResponse.text();
-    console.log("[api/chat] Groq raw response:", rawText.substring(0, 200));
 
     if (!groqResponse.ok) {
-      return res.status(500).json({ error: `Groq error ${groqResponse.status}: ${rawText}` });
+      return res.status(500).json({ error: `Groq error: ${rawText}` });
     }
 
     let data;
     try {
       data = JSON.parse(rawText);
     } catch {
-      return res.status(500).json({ error: `Invalid JSON from Groq: ${rawText}` });
+      return res.status(500).json({ error: `Invalid JSON: ${rawText}` });
     }
 
-    const reply = data?.choices?.[0]?.message?.content;
+    // Try multiple extraction paths
+    const choice = data?.choices?.[0];
+    const reply =
+      choice?.message?.content ||
+      choice?.text ||
+      data?.output?.[0]?.content?.[0]?.text ||
+      null;
 
-    if (!reply) {
-      console.log("[api/chat] Full response:", JSON.stringify(data));
-      return res.status(500).json({ error: "No reply received from Groq" });
+    if (!reply || reply.trim() === "") {
+      // Log full response to Vercel logs for debugging
+      console.error("[api/chat] Empty reply. Full data:", JSON.stringify(data));
+      return res.status(500).json({
+        error: "Empty reply from Groq",
+        debug: JSON.stringify(data).substring(0, 300),
+      });
     }
 
-    return res.status(200).json({ reply });
+    return res.status(200).json({ reply: reply.trim() });
 
   } catch (err) {
     console.error("[api/chat] Error:", err.message);
