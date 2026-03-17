@@ -17,7 +17,7 @@ export default function App() {
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
           <span className="text-blue-300 text-xs font-medium tracking-widest uppercase">Now Accepting Q1 Partnerships</span>
         </div>
-        <h1 className="text-6xl md:text-8xl font-black mb-4 leading-none tracking-tight"
+        <h1 className="text-4xl md:text-5xl font-black mb-4 leading-none tracking-tight"
           style={{ fontFamily: "'Syne', sans-serif", background: "linear-gradient(135deg, #fff 0%, #93c5fd 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
           MARKETIX
         </h1>
